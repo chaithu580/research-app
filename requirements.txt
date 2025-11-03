@@ -1,0 +1,27 @@
+# ---- Flask Backend Core ----
+Flask==3.0.3
+Flask-Cors==4.0.0
+python-dotenv==1.0.1
+Werkzeug==3.0.3
+
+# ---- PDF & Text Extraction ----
+PyMuPDF==1.24.9
+
+# ---- NLP & Embeddings ----
+scikit-learn==1.5.2
+sentence-transformers==3.2.1
+faiss-cpu==1.9.0.post1
+numpy==1.26.4
+pandas==2.2.3
+tqdm==4.66.5
+
+# ---- LangChain Utility ----
+langchain-text-splitters==0.2.2
+
+# ---- LLM Summarization ----
+transformers==4.44.2
+torch>=2.2.0
+accelerate==0.33.0
+
+# ---- Environment ----
+dotenv==0.0.5
