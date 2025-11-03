@@ -3,25 +3,27 @@ Flask==3.0.3
 Flask-Cors==4.0.0
 python-dotenv==1.0.1
 Werkzeug==3.0.3
+gunicorn==22.0.0   # Needed by Render to serve Flask app
 
 # ---- PDF & Text Extraction ----
-PyMuPDF==1.24.9
+PyMuPDF==1.26.5    # 1.26.5 is compatible with Python 3.13
 
 # ---- NLP & Embeddings ----
-scikit-learn==1.5.2
-sentence-transformers==3.2.1
-faiss-cpu==1.9.0.post1
-numpy==1.26.4
+numpy==2.3.2        # Supports Python 3.13+
 pandas==2.2.3
+scikit-learn==1.6.0
 tqdm==4.66.5
+faiss-cpu==1.12.0   # Newest version compatible with 3.13
+sentence-transformers==3.2.1
 
 # ---- LangChain Utility ----
 langchain-text-splitters==0.2.2
 
 # ---- LLM Summarization ----
 transformers==4.44.2
-torch>=2.2.0
+torch==2.5.1        # Works with Python 3.13
 accelerate==0.33.0
 
 # ---- Environment ----
-dotenv==0.0.5
+python-dotenv==1.0.1
+
