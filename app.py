@@ -230,6 +230,6 @@ def cluster_topics():
 # ==================== Run ====================
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8000))
+    port = int(os.getenv("PORT", 10000))
     print(f"🚀 API running at http://127.0.0.1:{port}")
     app.run(debug=True, host="0.0.0.0", port=port)
