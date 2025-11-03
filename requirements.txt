@@ -22,7 +22,7 @@ sentence-transformers==3.2.1
 langchain-text-splitters==0.2.2
 
 # ---- LLM Summarization ----
-transformers==4.44.2
+transformers==4.46.2
+tokenizers==0.21.2
 torch==2.5.1
 accelerate==0.33.0
-
