@@ -128,68 +128,104 @@ def _normalize_text_for_citations(text: str) -> str:
     text = text.replace('\u201C', '"').replace('\u201D', '"')
     return text
 
+import re
+from typing import List, Tuple
+
 def extract_citations(text: str, return_spans: bool = False) -> List:
     """
     Extract citations from academic text.
 
-    Returns a sorted list of unique citation strings by default.
-    If return_spans=True, returns a list of tuples (citation_text, start_index, end_index).
+    Supports:
+    ✅ Numeric citations: [1], [2,3], [2–4]
+    ✅ (Author, 2020), (Author & Author, 2021)
+    ✅ Inline: Author (2020), Author and Author (2020)
+    ✅ et al. formats: (Smith et al., 2020), Smith et al. (2020)
+    ✅ Bibliography lines: Benson, P. (2001)
     """
+
+    def _normalize_text_for_citations(t: str) -> str:
+        return re.sub(r'\s+', ' ', t.replace("\n", " ").replace("\r", " ")).strip()
 
     text = _normalize_text_for_citations(text)
 
-    # Build patterns (use non-capturing groups everywhere)
+    # 1) Numeric citations [2], [2-4], [2–4], [2,3]
     numeric_pattern = r"""
-        # numeric citations like [1], [2,3], [2-4], [2–4]
         \[\s*\d+(?:\s*(?:[,;-]\s*|\s*-\s*|\s*–\s*)\d+)*(?:\s*(?:,\s*\d+)*)?\s*\]
     """
 
-    # in-text author-year citations:
-    # e.g. (Benson, 2001)
-    # e.g. (Reinders & White, 2016)
-    # e.g. (Dörnyei, 2007, p. 98-99)
-    # e.g. (Smith, 2010; Jones, 2012)
+    # 2) (Author, Year...), multi-author allowed
     author_year_pattern = r"""
         \(
             \s*
-            (?:[A-Z][A-Za-zÀ-ÖØ-öø-ÿ'`\.&\-\s]+?)   # author(s) - permissive allowed chars
-            (?:\s*(?:;|and|&)\s*[A-Z][A-Za-zÀ-ÖØ-öø-ÿ'`\.&\-\s]+?)*  # optional multiple authors separated by ; & or and
+            (?:[A-Z][A-Za-zÀ-ÖØ-öø-ÿ'`\.&\-\s]+?)
+            (?:\s*(?:;|and|&)\s*[A-Z][A-Za-zÀ-ÖØ-öø-ÿ'`\.&\-\s]+?)*
             \s*,\s*
-            \d{4}[a-z]?                              # year, maybe suffix like 2010a
-            (?:\s*,\s*(?:pp?\.?\s*)?\d+(?:\s*-\s*\d+)?)?  # optional page or pp. 12-15
-            (?:\s*;\s*[A-Z][A-Za-zÀ-ÖØ-öø-ÿ'`\.&\-\s]+?,\s*\d{4}[a-z]?(?:\s*,\s*(?:pp?\.?\s*)?\d+(?:-\d+)?)?)*  # multiple citations inside same parentheses
+            \d{4}[a-z]?
+            (?:\s*,\s*(?:pp?\.?\s*)?\d+(?:\s*-\s*\d+)?)?
+            (?:\s*;\s*[A-Z][A-Za-zÀ-ÖØ-öø-ÿ'`\.&\-\s]+?,\s*\d{4}[a-z]?
+                (?:\s*,\s*(?:pp?\.?\s*)?\d+(?:\s*-\s*\d+)?)? )*
             \s*
         \)
     """
 
-    # bibliographic/reference list entries:
-    # e.g. Benson, P. (2001). Title...
-    # e.g. Reinders, H. & White, C. (2016).
+    # 3) Bibliography style: Benson, P. (2001)
     bib_entry_pattern = r"""
-        # AuthorLast, Initial. (YEAR)  — typically at start of reference lines
-        (?:^|\n)
+        (?:^|\n|\r|\. )
         \s*
-        [A-Z][A-Za-zÀ-ÖØ-öø-ÿ'`\-]+          # last name
-        (?:,\s*[A-Z]\.)+                     # one or more initials "P." or "P. Q."
-        (?:\s*(?:&|and)\s*[A-Z][A-Za-zÀ-ÖØ-öø-ÿ'`\-]+,\s*[A-Z]\.)*  # optional additional authors
-        \s*
-        \(\s*\d{4}[a-z]?\s*\)                # (2001)
+        [A-Z][A-Za-zÀ-ÖØ-öø-ÿ'`\-]+
+        (?:,\s*[A-Z]\.)+
+        (?:\s*(?:&|and)\s*[A-Z][A-Za-zÀ-ÖØ-öø-ÿ'`\-]+,\s*[A-Z]\.)*
+        \s*\(\s*\d{4}[a-z]?\s*\)
     """
 
-    # Combine patterns with alternation. Use non-capturing groups only.
-    combined = f"(?:{numeric_pattern})|(?:{author_year_pattern})|(?:{bib_entry_pattern})"
+    # 4) Inline: Littlewood (1996)
+    author_year_inline_pattern = r"""
+        \b
+        [A-Z][A-Za-zÀ-ÖØ-öø-ÿ'`\-]+
+        (?:\s+(?:and|&)\s+[A-Z][A-Za-zÀ-ÖØ-öø-ÿ'`\-]+)?
+        \s*\(\s*\d{4}[a-z]?\s*\)
+    """
+
+    # 5) Inline et al.: Smith et al. (2020)
+    author_et_al_inline_pattern = r"""
+        \b
+        [A-Z][A-Za-zÀ-ÖØ-öø-ÿ'`\-]+
+        \s+et\s+al\.?\s*
+        \(\s*\d{4}[a-z]?\s*\)
+    """
+
+    # 6) Parenthetical et al.: (Smith et al., 2020)
+    author_et_al_parenthetical_pattern = r"""
+        \(
+            \s*
+            [A-Z][A-Za-zÀ-ÖØ-öø-ÿ'`\-]+
+            \s+et\s+al\.?
+            \s*,?\s*
+            \d{4}[a-z]?
+            (?:\s*,\s*(?:pp?\.?\s*)?\d+(?:\s*-\s*\d+)?)?
+            \s*
+        \)
+    """
+
+    # Compile all citation patterns
+    combined = f"""
+        (?:{numeric_pattern})
+        | (?:{author_year_pattern})
+        | (?:{bib_entry_pattern})
+        | (?:{author_year_inline_pattern})
+        | (?:{author_et_al_inline_pattern})
+        | (?:{author_et_al_parenthetical_pattern})
+    """
 
     regex = re.compile(combined, re.VERBOSE | re.UNICODE | re.IGNORECASE)
 
     matches: List[Tuple[str,int,int]] = []
     for m in regex.finditer(text):
         matched = m.group(0).strip()
-        # discard super-short matches or false positives
         if len(matched) < 3:
             continue
         matches.append((matched, m.start(), m.end()))
 
-    # Normalize small variations (e.g., collapse multiple spaces)
     def _clean(s: str) -> str:
         return re.sub(r'\s+', ' ', s).strip()
 
@@ -199,15 +235,10 @@ def extract_citations(text: str, return_spans: bool = False) -> List:
         if key not in unique:
             unique[key] = (key, a, b)
 
-    results = list(unique.values())  # list of tuples (text, start, end)
-    # sort by position in text so output is deterministic
+    results = list(unique.values())
     results.sort(key=lambda t: t[1])
 
-    if return_spans:
-        return results
-    # otherwise return only citation strings
-    return [t[0] for t in results]
-
+    return results if return_spans else [t[0] for t in results]
 
 def compare_abstracts(original: str, generated: str) -> Dict[str, float]:
     """
