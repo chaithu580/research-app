@@ -128,9 +128,6 @@ def _normalize_text_for_citations(text: str) -> str:
     text = text.replace('\u201C', '"').replace('\u201D', '"')
     return text
 
-import re
-from typing import List, Tuple
-
 def extract_citations(text: str, return_spans: bool = False) -> List:
     """
     Extract citations from academic text.
